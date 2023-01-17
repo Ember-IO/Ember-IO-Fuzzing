@@ -5,3 +5,13 @@ Information regarding our experiments and results is available [here.](https://g
 
 
 Code to be released upon publication.
+
+## Cite Us
+```
+@inproceedings{emberio,
+title = {{Ember-IO}: Effective Firmware Fuzzing with Model-Free Memory Mapped IO},
+author = {Guy Farrelly and Michael Chesser and Damith C. Ranasinghe},
+booktitle = {Proceedings of 18th ACM ASIA Conference on Computer and Communications Security (ASIA CCS)},
+year = {2023}
+}
+```
