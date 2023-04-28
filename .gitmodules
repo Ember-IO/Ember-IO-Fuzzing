@@ -1,0 +1,6 @@
+[submodule "AFLplusplus"]
+	path = AFLplusplus
+	url = https://github.com/Ember-IO/AFLplusplus.git
+[submodule "Ember-IO-Experiments"]
+	path = Ember-IO-Experiments
+	url = https://github.com/Ember-IO/Ember-IO-Experiments
