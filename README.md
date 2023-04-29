@@ -7,9 +7,13 @@ This page is still under construction. Additional scripts assisting in setup and
 
 ## Installation
 ``git submodule update --init --recursive``
+
 ``cd AFLplusplus``
+
 ``make``
+
 ``cd qemu_mode``
+
 ``./build_qemu_support.sh``
 
 ## Instructions
@@ -26,7 +30,7 @@ Second, the location of the file to used for MMIO input has to be specified. As 
 Third, the location of the binary to test needs to be defined. This is simply a directory to a .ELF file. E.g. *~/test_firmware.elf*
 Lastly, the parameters for the target device's memory map need to be configured. This includes both the SRAM and flash sections. The SRAM setup is performed with the *-sram_base* and *-sram_size* commands. For a device with 128KB of RAM at address 0x20000000, append *-sram_base 0x20000000 -sram_size 128k* to the command. Similarly flash, for a device with 1MB of flash at address 0x8000000, the parameters *-flash_base 0x8000000 -flash_size 1M* would be appended to the command.
 
-All combined, this results in the command ``./afl-fuzz -i ./seeds -o ./output -Q -machine embedded_fuzz -fuzz_input @@ ~/test_firmware.elf -sram_base 0x20000000 -sram_size 128k -flash_base 0x8000000 -flash_size 1M``
+All combined, this results in the command ``./afl-fuzz -i ./seeds -o ./output -Q ~/test_firmware.elf -machine embedded_fuzz -fuzz_input @@ -sram_base 0x20000000 -sram_size 128k -flash_base 0x8000000 -flash_size 1M``
 
 
 ### Crash Analysis
