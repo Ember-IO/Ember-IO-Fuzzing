@@ -1,11 +1,18 @@
 # Ember-IO
 
-Ember-IO is an automated testing tool for embedded systems. More specifically, it's a fuzzing framework focused on monolithic firmware, supporting firmware built for ARM Cortex-M microcontrollers.
+Ember-IO is an automated testing tool for embedded systems. More specifically, it's a fuzzing framework focused on monolithic firmware, supporting firmware built for ARM Cortex-M microcontrollers. We aim to assist fuzzing of firmware through alternate input generation and coverage feedback methods.
 
-## Under Construction
-This page is still under construction. Additional scripts assisting in setup and data processing will be released soon.
+You can read the full paper regarding our work [here](https://arxiv.org/abs/2301.06689).
 
 ## Installation
+``sudo apt install build-essential ninja-build pkg-config libglib2.0-dev libpixman-1-dev``
+
+``git clone https://github.com/Ember-IO/Ember-IO-Fuzzing``
+
+``cd Ember-IO-Fuzzing``
+
+``export EMBER_BASE_DIR=$(pwd)``
+
 ``git submodule update --init --recursive``
 
 ``cd AFLplusplus``
@@ -32,6 +39,7 @@ Lastly, the parameters for the target device's memory map need to be configured.
 
 All combined, this results in the command ``./afl-fuzz -i ./seeds -o ./output -Q ~/test_firmware.elf -machine embedded_fuzz -fuzz_input @@ -sram_base 0x20000000 -sram_size 128k -flash_base 0x8000000 -flash_size 1M``
 
+Examples using Ember-IO on real world binaries can be viewed in our scripts [here](https://github.com/Ember-IO/Ember-IO-Experiments/tree/main/Fuzzing).
 
 ### Crash Analysis
 After crashes have been identified by the fuzzer, they can be replayed for further analysis. This is done by running them in QEMU.
