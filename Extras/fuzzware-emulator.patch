@@ -1,0 +1,35 @@
+diff --git a/harness/fuzzware_harness/native/core_peripherals/cortexm_nvic.c b/harness/fuzzware_harness/native/core_peripherals/cortexm_nvic.c
+index 85088d6..c17cb0a 100644
+--- a/harness/fuzzware_harness/native/core_peripherals/cortexm_nvic.c
++++ b/harness/fuzzware_harness/native/core_peripherals/cortexm_nvic.c
+@@ -1,5 +1,8 @@
+ #include "cortexm_nvic.h"
+ 
++
++unsigned long excp_prev_loc = 0;
++
+ // We implement recalculating states lazily, but can disable that behavior
+ // #define DISABLE_LAZY_RECALCS
+ 
+@@ -954,6 +957,11 @@ static void nvic_exception_return_hook(uc_engine *uc, uint64_t address, uint32_t
+ 
+     ExceptionReturn(uc, address);
+ 
++    if(excp_prev_loc){
++        uc_set_prev_loc(uc, excp_prev_loc);
++        excp_prev_loc = 0;
++    }
++
+     #ifdef DEBUG_NVIC
+     uint32_t pc;
+     uc_reg_read(uc, UC_ARM_REG_PC, &pc);
+@@ -1066,6 +1074,9 @@ static void ExceptionEntry(uc_engine *uc, bool is_tail_chained, bool skip_instru
+ 
+     // We inline ExceptionTaken here
+ 
++    excp_prev_loc = uc_get_prev_loc(uc);
++    uc_set_prev_loc(uc, 0);
++
+     // Find the ISR entry point and set it
+     uint32_t ExceptionNumber = nvic.pending_irq;
+     uint32_t isr_entry;

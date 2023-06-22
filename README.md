@@ -4,6 +4,17 @@ Ember-IO is an automated testing tool for embedded systems. More specifically, i
 
 You can read the full paper, accepted to AsiaCCS '23, regarding our work [here](https://arxiv.org/abs/2301.06689).
 
+
+# Cite Us
+```
+@inproceedings{emberio,
+title = {{Ember-IO}: Effective Firmware Fuzzing with Model-Free Memory Mapped IO},
+author = {Guy Farrelly and Michael Chesser and Damith C. Ranasinghe},
+booktitle = {Proceedings of 18th ACM ASIA Conference on Computer and Communications Security (ASIA CCS)},
+year = {2023}
+}
+```
+
 # Installation
 We provide instructions based on Ubuntu 20.04, using other linux distros may require you to substitute apt commands with your chosen package manager. For other systems, additional dependencies may be required; which should be indicated in any error message presented. If you encounter any issues during installation, please open an [issue](https://github.com/Ember-IO/Ember-IO-Fuzzing/issues).
 
@@ -38,6 +49,7 @@ cd qemu_mode
     - Crashes               Scripts and Inputs for Reproduction of Previously Known Crashes
     - New Crashes           Scripts and Inputs for Reproduction of Newly Found Crashes
     - Fuzzing               Scripts for Fuzzing Test Binaries
+- Extras                    Miscellaneous items and documentation
 - README                    Installation and Operating Instructions
 ```
 
@@ -85,7 +97,7 @@ All combined, based on the previously given usage example, this results in a com
 
 To assist in locating faults QEMU's debug outputs can be enabled. Useful ones include *exec*, *int* and *mmu*. To enable this extra output, add *-d exec,int,mmu* to the end of your afl-qemu-trace command. To see the state of all registers at each block, you can also try *cpu* and *nochain*, but this will create a very large output. It's also possible to connect with GDB to this instance, by adding *-s -S* to the parameters, and using the *target remote tcp::1234* command in GDB. This allows more in-depth debugging and single stepping of instructions.
 
-NOTE: Monitoring in GDB can influence execution under certain circumstances. Be sure to verify the crash still occurs in the same manner as without GDB.
+NOTE: Monitoring in GDB can influence execution under certain circumstances. Be sure to verify the crash still occurs in the same manner as without GDB. More details are available [here](https://github.com/Ember-IO/Ember-IO-Fuzzing/Extras/gdb.md).
 
 # Project Details
 Full technical details of the problems and our solutions can be viewed in our paper [here](https://arxiv.org/abs/2301.06689). But a basic description of the problem and our techniques is as follows:
@@ -94,20 +106,10 @@ Full technical details of the problems and our solutions can be viewed in our pa
 Many firmware repeatedly access peripheral registers to monitor the state of a peripheral and determine an appropriate response. To reduce the amount of fuzzer generated input that has to be mutated to find valid values, we use Peripheral Input Playback to allow the simple repetition of existing values recently seen in the same register. For commonly polled registers, this can greatly reduce the amount of data required to overcome hurdles in firmware execution. However, playback is not forced, allowing the fuzzer to still generate any possible combination of values for each register, preventing over-restriction of the fuzzing search space.
 
 ## FERMCov
-Unlike desktop applications more often tested by fuzzers, embedded firmware depends on hardware interrupts in order to signal certain events. It's common-place to trigger these events periodically during fuzzing based on the number of blocks executed. However, small variations in the timing of interrupts causes a change in execution flow from the perspective of the fuzzer. While the different timing of the interrupt doesn't usually represent any new interesting behaviour, the fuzzer is normally unable to determine this. Thus many paths with slightly varied timing will all be saved to be fuzzed further in future. To simplify scheduling for the fuzzer, FERMCov seperates the coverage of interrupt handlers from the main program code, preventing jumps between the two being an indicator of new coverage.
+Unlike desktop applications more often tested by fuzzers, embedded firmware depends on hardware interrupts in order to signal certain events. It's common-place to trigger these events periodically during fuzzing based on the number of blocks executed. However, small variations in the timing of interrupts causes a change in execution flow from the perspective of the fuzzer. While the different timing of the interrupt doesn't usually represent any new interesting behaviour, the fuzzer is normally unable to determine this. Thus many paths with slightly varied timing will all be saved to be fuzzed further in future. To simplify scheduling for the fuzzer, FERMCov seperates the coverage of interrupt handlers from the main program code, preventing jumps between the two being an indicator of new coverage. Instructions for a simple implementation of FERMCov for Fuzzware is [here](https://github.com/Ember-IO/Ember-IO-Fuzzing/Extras/fuzzware-fermcov.md).
 
 # Experiments
 Information regarding our experiments and results are made available [here.](https://github.com/Ember-IO/Ember-IO-Experiments)
 
 # Found an issue? Let us know
 If you encounter an issue using Ember-IO please open an [issue](https://github.com/Ember-IO/Ember-IO-Fuzzing/issues).
-
-# Cite Us
-```
-@inproceedings{emberio,
-title = {{Ember-IO}: Effective Firmware Fuzzing with Model-Free Memory Mapped IO},
-author = {Guy Farrelly and Michael Chesser and Damith C. Ranasinghe},
-booktitle = {Proceedings of 18th ACM ASIA Conference on Computer and Communications Security (ASIA CCS)},
-year = {2023}
-}
-```

@@ -1,0 +1,143 @@
+diff --git a/include/uc_priv.h b/include/uc_priv.h
+index e110ffbd..805ef3e3 100644
+--- a/include/uc_priv.h
++++ b/include/uc_priv.h
+@@ -163,6 +163,8 @@ struct uc_struct {
+ 
+     uc_args_uc_ptr_uint_t fuzzer_init_cov;
+     uc_args_uc_int_t fuzzer_reset_cov;
++    unsigned long* fuzzer_prev_loc;
++    unsigned long* fuzzer_prev_prev_loc;
+ 
+     uc_set_mem_t set_mem;
+     uc_write_mem_t write_mem;
+diff --git a/include/unicorn/unicorn.h b/include/unicorn/unicorn.h
+index 4418b74b..ffa94eba 100644
+--- a/include/unicorn/unicorn.h
++++ b/include/unicorn/unicorn.h
+@@ -812,6 +812,12 @@ uc_err uc_fuzzer_init_cov(uc_engine *uc, void *bitmap_region, uint32_t bitmap_si
+ UNICORN_EXPORT
+ uc_err uc_fuzzer_reset_cov(uc_engine *uc, int do_clear);
+ 
++UNICORN_EXPORT
++uc_err uc_set_prev_loc(uc_engine *uc, unsigned long prev_cov);
++
++UNICORN_EXPORT
++unsigned long uc_get_prev_loc(uc_engine *uc);
++
+ #ifdef __cplusplus
+ }
+ #endif
+diff --git a/qemu/fuzzer/cov.c b/qemu/fuzzer/cov.c
+index 9c11a405..ca02c372 100644
+--- a/qemu/fuzzer/cov.c
++++ b/qemu/fuzzer/cov.c
+@@ -2,6 +2,7 @@
+ #include "cov.h"
+ 
+ unsigned long cov_prev_loc = 0;
++unsigned long cov_prev_prev_loc = 0;
+ unsigned char *cov_area_ptr = NULL;
+ unsigned long cov_area_size = 0;
+ 
+@@ -31,6 +32,7 @@ void fuzzer_init_cov(uc_engine *uc, void *bitmap_region, uint32_t bitmap_size) {
+ 
+     cov_area_size = bitmap_size;
+     cov_prev_loc = 0;
++    cov_prev_prev_loc = 0;
+ }
+ 
+ void fuzzer_reset_cov(uc_engine *uc, int do_clear) {
+@@ -39,4 +41,5 @@ void fuzzer_reset_cov(uc_engine *uc, int do_clear) {
+     }
+ 
+     cov_prev_loc = 0;
++    cov_prev_prev_loc = 0;
+ }
+diff --git a/qemu/fuzzer/cov.h b/qemu/fuzzer/cov.h
+index a277048e..10e03b01 100644
+--- a/qemu/fuzzer/cov.h
++++ b/qemu/fuzzer/cov.h
+@@ -9,9 +9,12 @@
+ 
+ extern unsigned char *cov_area_ptr;
+ extern unsigned long cov_prev_loc;
++extern unsigned long cov_prev_prev_loc;
+ extern unsigned long cov_area_size;
+ 
+ void fuzzer_init_cov(uc_engine *uc, void *bitmap_region, uint32_t bitmap_size);
+ void fuzzer_reset_cov(uc_engine *uc, int do_clear);
++void fuzzer_set_prev_loc(unsigned long);
++unsigned long fuzzer_get_prev_loc(void);
+ 
+ #endif
+diff --git a/qemu/header_gen.py b/qemu/header_gen.py
+index b1a08686..732842af 100644
+--- a/qemu/header_gen.py
++++ b/qemu/header_gen.py
+@@ -11,6 +11,7 @@ symbols = (
+     'fuzzer_reset_cov',
+     'cov_prev_loc',
+     'cov_area_ptr',
++    'cov_prev_prev_loc',
+     'cov_area_size',
+     'fw_log',
+     'arm_release',
+diff --git a/qemu/translate-all.c b/qemu/translate-all.c
+index 433375e4..1b3c4a28 100644
+--- a/qemu/translate-all.c
++++ b/qemu/translate-all.c
+@@ -168,7 +168,7 @@ Inserts AFL instrumentation code into the current TB.
+ */
+ static void afl_add_instrumentation(TCGContext *ctx, target_ulong cur_loc) {
+     TCGv_i32 index, count, new_prev_loc;
+-    TCGv_ptr prev_loc_ptr, count_ptr;
++    TCGv_ptr prev_loc_ptr, count_ptr, prev_prev_loc_ptr;
+ 
+     if (unlikely(cov_area_ptr == NULL))
+         return;
+@@ -183,6 +183,10 @@ static void afl_add_instrumentation(TCGContext *ctx, target_ulong cur_loc) {
+     prev_loc_ptr = tcg_const_ptr(ctx, &cov_prev_loc);
+     index = tcg_temp_new_i32(ctx);
+     tcg_gen_ld_i32(ctx, index, prev_loc_ptr, 0);
++    /* prev_prev_loc = prev_loc */
++    prev_prev_loc_ptr = tcg_const_ptr(ctx, &cov_prev_prev_loc);
++    tcg_gen_st_i32(ctx, index, prev_prev_loc_ptr, 0);
++    /* end prev_prev_loc */
+     tcg_gen_xori_i32(ctx, index, index, cur_loc);
+ 
+     /* cov_area_ptr[index]++ */
+diff --git a/qemu/unicorn_common.h b/qemu/unicorn_common.h
+index 7cecf181..aac3517e 100644
+--- a/qemu/unicorn_common.h
++++ b/qemu/unicorn_common.h
+@@ -90,6 +90,8 @@ static inline void uc_common_init(struct uc_struct* uc)
+     uc->readonly_mem = memory_region_set_readonly;
+     uc->fuzzer_init_cov = fuzzer_init_cov;
+     uc->fuzzer_reset_cov = fuzzer_reset_cov;
++    uc->fuzzer_prev_loc = &cov_prev_loc;
++    uc->fuzzer_prev_prev_loc = &cov_prev_prev_loc;
+ 
+     uc->target_page_size = TARGET_PAGE_SIZE;
+     uc->target_page_align = TARGET_PAGE_SIZE - 1;
+diff --git a/uc.c b/uc.c
+index 1402fb0a..94eaf13a 100644
+--- a/uc.c
++++ b/uc.c
+@@ -1632,3 +1632,16 @@ uc_err uc_fuzzer_reset_cov(uc_engine *uc, int do_clear)
+     uc->fuzzer_reset_cov(uc, do_clear);
+     return UC_ERR_OK;
+ }
++
++UNICORN_EXPORT
++unsigned long uc_get_prev_loc(uc_engine *uc)
++{
++    return *(uc->fuzzer_prev_prev_loc);
++}
++
++UNICORN_EXPORT
++uc_err uc_set_prev_loc(uc_engine *uc, unsigned long prev_cov)
++{
++    *(uc->fuzzer_prev_loc) = prev_cov;
++    return UC_ERR_OK;
++}
